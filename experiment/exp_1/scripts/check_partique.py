@@ -2,34 +2,62 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-# Absoluter Pfad zu deinem Projekt
-BASE_DIR = r"C:/Users/suadn/Crypto-Whale-Detection"
+# Absoluter Pfad zu deinem Projekt (bleibt so!)
+BASE_DIR = r"C:/Users/sgenk/PycharmProjects/Crypto-Whale-Detection/"
 
-# Pfad zur gewünschten Parquet-Datei
+# Pfad zur Parquet-Datei
 file = os.path.join(
     BASE_DIR,
     "experiment",
     "exp_1",
     "data",
-    "Raw",
-    "Bars_1m",
+    "raw",
+    "bars_1m",
     "BTCUSDT",
     "2025-06-19.parquet"
 )
 
 df = pd.read_parquet(file)
 
-# Nur die ersten ~50 Zeilen als Vorschau
-head_df = df.head(50)
+# Falls Datei noch 'open_time' statt 'timestamp' hat → umbenennen
+if "open_time" in df.columns:
+    df = df.rename(columns={"open_time": "timestamp"})
 
-plt.figure(figsize=(12, 6))
-plt.table(cellText=head_df.values,
-          colLabels=head_df.columns,
-          loc="center")
+# Falls timestamp nicht existiert → Fehler werfen
+if "timestamp" not in df.columns:
+    raise ValueError(" 'timestamp' wurde in der Parquet-Datei nicht gefunden!")
 
+# Nur die gewünschten Spalten extrahieren
+columns_we_need = [
+    "timestamp",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "vwap"
+]
+
+missing_cols = [c for c in columns_we_need if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"folgende Spalten fehlen in deiner Parquet-Datei: {missing_cols}")
+
+df = df[columns_we_need]
+
+# ---------------------------------------------
+# PNG erzeugen
+# ---------------------------------------------
+preview = df.head(50)
+
+plt.figure(figsize=(14, 6))
+plt.table(
+    cellText=preview.values,
+    colLabels=preview.columns,
+    loc="center"
+)
 plt.axis("off")
 
-out_file = "parquet_preview.png"
+out_file = os.path.join(BASE_DIR, "parquet_preview.png")
 plt.savefig(out_file, dpi=300, bbox_inches="tight")
 
-print("Bild gespeichert als:", out_file)
+print("✅ PNG gespeichert unter:", out_file)

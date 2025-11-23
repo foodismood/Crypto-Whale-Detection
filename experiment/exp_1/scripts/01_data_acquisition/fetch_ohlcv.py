@@ -2,19 +2,12 @@ import pandas as pd
 import requests
 import os
 
-# -----------------------------------------
-# Helper: Get the base path (project root)
-# -----------------------------------------
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DATA_DIR = os.path.join(BASE_DIR, "data/Raw/Bars_1m")
+DATA_DIR = os.path.join(BASE_DIR, "data", "raw", "bars_1m")
 
-# Create all required directories
 os.makedirs(os.path.join(DATA_DIR, "BTCUSDT"), exist_ok=True)
 os.makedirs(os.path.join(DATA_DIR, "ETHUSDT"), exist_ok=True)
 
-# -----------------------------------------
-# Fetch function
-# -----------------------------------------
 def fetch_klines(symbol, interval, start_str, end_str=None):
     url = "https://api.binance.com/api/v3/klines"
     params = {
@@ -34,22 +27,38 @@ def fetch_klines(symbol, interval, start_str, end_str=None):
         "taker_buy_base","taker_buy_quote","ignore"
     ])
 
+    # timestamps
     df["open_time"] = pd.to_datetime(df["open_time"], unit="ms")
-    df["close_time"] = pd.to_datetime(df["close_time"], unit="ms")
 
-    return df
+    # numeric conversion
+    df[["open","high","low","close","volume","quote_asset_volume"]] = \
+        df[["open","high","low","close","volume","quote_asset_volume"]].astype(float)
 
-# -----------------------------------------
-# Fetch BTC
-# -----------------------------------------
+    # -----------------------------------------
+    # VWAP berechnen
+    # -----------------------------------------
+    df["vwap"] = df["quote_asset_volume"] / df["volume"]
+
+    # final cleaned df
+    df_final = df[[
+        "open_time",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "vwap"
+    ]].rename(columns={"open_time": "timestamp"})
+
+    return df_final
+
+# BTC speichern
 btc_df = fetch_klines("BTCUSDT", "1m", "2025-06-19", "2025-06-20")
 btc_path = os.path.join(DATA_DIR, "BTCUSDT", "2025-06-19.parquet")
 btc_df.to_parquet(btc_path)
 print("Saved:", btc_path)
 
-# -----------------------------------------
-# Fetch ETH
-# -----------------------------------------
+# ETH speichern
 eth_df = fetch_klines("ETHUSDT", "1m", "2025-06-19", "2025-06-20")
 eth_path = os.path.join(DATA_DIR, "ETHUSDT", "2025-06-19.parquet")
 eth_df.to_parquet(eth_path)
