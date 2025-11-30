@@ -2,171 +2,173 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-# ==============================================================================
-# SETTINGS – Pfade anpassen
-# ==============================================================================
-
-BASE_DIR = Path("/Users/alperademgencer/PycharmProjects/Crypto-Whale-Detection/1/experiment/exp_1")
-IMG_DIR = BASE_DIR / "images"
-IMG_DIR.mkdir(parents=True, exist_ok=True)
-
-BARS_PATH = {
-    "BTCUSDT": BASE_DIR / "data/raw/Bars_1m/BTCUSDT/2023-06-20_to_2025-06-20.parquet",
-    "ETHUSDT": BASE_DIR / "data/raw/Bars_1m/ETHUSDT/2023-06-20_to_2025-06-20.parquet",
-}
-
-WHALES_PATH = {
-    "BTCUSDT": BASE_DIR / "data/raw/Orderbook/BTCUSDT/BTCUSDT_20240620-20250620_whales.parquet",
-    "ETHUSDT": BASE_DIR / "data/raw/Orderbook/ETHUSDT/ETHUSDT_20240620-20250620_whales.parquet",
-}
 
 
-# ==============================================================================
-# TIMESTAMP FUNKTIONEN
-# ==============================================================================
+# Hilfsfunktion: Bars vorbereiten
+def prepare_bars(bars_parquet: str) -> pd.DataFrame:
+    df_bars = pd.read_parquet(bars_parquet).copy()
 
-def normalize_whale_timestamp(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Whales: timestamp in Millisekunden (13-stellig) -> Datetime in Spalte 'whale_ts'.
-    Originalspalte 'timestamp' bleibt unangetastet.
-    """
-    if "timestamp" not in df.columns:
-        raise ValueError(f"No 'timestamp' column in whales dataframe. Columns: {df.columns}")
+    # Sicherstellen, dass timestamp eine echte Datetime-Spalte ist
+    df_bars["timestamp"] = pd.to_datetime(df_bars["timestamp"], errors="coerce")
+    df_bars = df_bars.dropna(subset=["timestamp"])
+    df_bars = df_bars.sort_values("timestamp").reset_index(drop=True)
 
-    ts_raw = df["timestamp"].astype("int64")
-    df["whale_ts"] = pd.to_datetime(ts_raw, unit="ms", utc=True)
-    return df
+    return df_bars
 
 
-def normalize_bars_timestamp(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Bars: 'timestamp' kann Sekunden (10-stellig) oder Millisekunden (13-stellig) sein.
-    Ergebnis steht in 'bar_ts'.
-    """
-    if "timestamp" not in df.columns:
-        raise ValueError(f"No 'timestamp' column in bars dataframe. Columns: {df.columns}")
+# Hilfsfunktion: Whales vorbereiten
 
-    ts_raw = df["timestamp"].astype("int64")
-    digits = ts_raw.astype(str).str.len().max()
+def prepare_whales(whale_parquet: str) -> pd.DataFrame:
+    df_whales = pd.read_parquet(whale_parquet).copy()
 
-    if digits == 10:
-        unit = "s"
-    elif digits == 13:
-        unit = "ms"
-    elif digits == 16:
-        unit = "us"
-    elif digits == 19:
-        unit = "ns"
-    else:
-        raise ValueError(f"Unsupported timestamp length for bars: {digits} digits")
+    # time numerisch erzwingen
+    df_whales["time"] = pd.to_numeric(df_whales["time"], errors="coerce")
 
-    df["bar_ts"] = pd.to_datetime(ts_raw, unit=unit, utc=True)
+    before = len(df_whales)
 
-    # zur Sicherheit nach Zeit sortieren
-    df = df.sort_values("bar_ts").reset_index(drop=True)
-    return df
+    # Binance-ms-Timestamps:
+    mask = (df_whales["time"] > 1_000_000_000_000) & (df_whales["time"] < 10_000_000_000_000)
+    df_whales = df_whales.loc[mask].copy()
+
+    after = len(df_whales)
+    print(f"🧹 Whale cleanup: {before} → {after} Zeilen (entfernt: {before - after})")
+
+    # Jetzt sicher in Datetime (Unix ms)
+    df_whales["timestamp"] = pd.to_datetime(df_whales["time"], unit="ms", errors="coerce")
+    df_whales = df_whales.dropna(subset=["timestamp"])
+    df_whales = df_whales.sort_values("timestamp").reset_index(drop=True)
+
+    return df_whales
 
 
-# ==============================================================================
-# PLOT FUNKTION
-# ==============================================================================
+#
+# Plot price 30 minutes after whale trade
+#
+def plot_after_whale(df_bars: pd.DataFrame,
+                     whale: pd.Series,
+                     symbol: str,
+                     save_path: Path,
+                     minutes_after: int = 30) -> None:
+    whale_ts = whale["timestamp"]
 
-def plot_after_whale_event(
-    df_bars: pd.DataFrame,
-    whale_timestamp: pd.Timestamp,
-    symbol: str,
-    save_path: Path,
-    minutes_after: int = 30,
-) -> None:
-    """
-    Plottet die 1m-Bars für 'minutes_after' Minuten NACH dem Whale-Event.
-    Start = Zeitpunkt des Whale-Events.
-    """
+    # Alle Bars, die ab dem Whale-Zeitpunkt liegen
+    matches = df_bars.index[df_bars["timestamp"] >= whale_ts]
 
-    # Zeitfenster definieren
-    end_time = whale_timestamp + pd.Timedelta(minutes=minutes_after)
-
-    mask = (df_bars["bar_ts"] >= whale_timestamp) & (df_bars["bar_ts"] <= end_time)
-    subset = df_bars.loc[mask].copy()
-
-    if subset.empty:
-        print(f"No candle data available for window after {whale_timestamp} ({symbol})")
+    if len(matches) == 0:
+        print(f"Keine Bars nach Whale gefunden bei {whale_ts}")
         return
 
-    # X-Achse = Minuten nach Whale
-    subset = subset.sort_values("bar_ts").reset_index(drop=True)
-    subset["minutes_after"] = (subset["bar_ts"] - whale_timestamp).dt.total_seconds() / 60.0
+    start_idx = matches.min()
+    end_idx = start_idx + minutes_after
 
+    subset = df_bars.loc[start_idx:end_idx].copy().reset_index(drop=True)
+
+    if subset.empty:
+        print(f"Leeres Zeitfenster nach Whale {whale_ts}")
+        return
+
+    # Plot
     plt.figure(figsize=(18, 9))
-    plt.plot(subset["minutes_after"], subset["close"], label=f"{symbol} Close Price")
+    plt.plot(subset.index, subset["close"],
+             label=f"{symbol} Close Price",
+             linewidth=1.5)
 
-    # Vertikale Linie bei Minute 0 (Whale-Event)
-    plt.axvline(0, linestyle="--", linewidth=2, label="Whale Event")
+    # Event bei t=0 markieren
+    plt.axvline(0, color="red", linestyle="--", linewidth=2, label="Whale Event")
 
-    # Day-Change Marker (optional)
-    day_change = subset["bar_ts"].dt.date.ne(subset["bar_ts"].dt.date.shift())
-    for i, new_day in enumerate(day_change):
-        if i > 0 and new_day:
-            x = subset.loc[i, "minutes_after"]
-            plt.axvline(x, linestyle="--", alpha=0.6)
+    # Neue Tage markieren (vertikale Linien in grün)
+    day_change = subset["timestamp"].dt.date.ne(subset["timestamp"].dt.date.shift())
+    for i, is_new in enumerate(day_change):
+        if i > 0 and is_new:
+            plt.axvline(i, color="green", linestyle="--", alpha=0.6)
 
-    plt.title(f"{symbol} — {minutes_after} Minutes After Whale Event ({whale_timestamp})")
-    plt.xlabel("Minutes After Whale")
+    # X-Achse: ein paar Ticks
+    ticks = subset.index[::max(1, len(subset) // 10)]
+    tick_labels = subset.loc[ticks, "timestamp"].dt.strftime("%Y-%m-%d %H:%M")
+    plt.xticks(ticks, tick_labels, rotation=45, ha="right")
+
+
+    qty = whale["qty"]
+    price = whale["price"]
+    usd = whale["value_usd"]
+    side = "SELL" if whale["isBuyerMaker"] else "BUY"  # Binance-Logik: isBuyerMaker=True → Maker ist Käufer → Aggressor SELL
+
+    info_text = (
+        f"Whale: {qty:.2f} BTC @ ${price:,.2f}\n"
+        f"Value: ${usd:,.0f}\n"
+        f"Side: {side}"
+    )
+
+    plt.text(
+        0.02, 0.98, info_text,
+        transform=plt.gca().transAxes,
+        fontsize=12,
+        va="top",
+        bbox=dict(facecolor="white", alpha=0.85, edgecolor="black")
+    )
+
+
+    plt.title(f"{symbol} – {minutes_after} Minuten nach Whale ({whale_ts})")
+    plt.xlabel("Minuten nach Event")
     plt.ylabel("Close Price")
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
 
+
+    save_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(save_path, dpi=150)
     plt.close()
+
     print(f"Saved plot: {save_path}")
 
 
-# ==============================================================================
-# MAIN PIPELINE
-# ==============================================================================
 
-if __name__ == "__main__":
+#Whale- und Bar-Dateien vergleichen + Plots erzeugen
 
-    for symbol in ["BTCUSDT", "ETHUSDT"]:
+def compare_parquets(whale_parquet: str, bars_parquet: str, symbol: str) -> None:
+    print(f"\n==================== {symbol} ====================")
+    print(f"Lade Whales: {whale_parquet}")
+    print(f"Lade Bars:   {bars_parquet}")
 
-        print("\n=======================================")
-        print(f"PROCESSING WHALE EVENTS FOR {symbol}")
-        print("=======================================\n")
+    df_whales = prepare_whales(whale_parquet)
+    df_bars = prepare_bars(bars_parquet)
 
-        # Daten laden
-        df_whales = pd.read_parquet(WHALES_PATH[symbol])
-        df_bars = pd.read_parquet(BARS_PATH[symbol])
+    print(f"Whale-Zeitraum: {df_whales['timestamp'].min()}  →  {df_whales['timestamp'].max()}")
+    print(f"Bars-Zeitraum:  {df_bars['timestamp'].min()}  →  {df_bars['timestamp'].max()}")
 
-        # Timestamps normalisieren (ohne irgendwas zu überschreiben)
-        df_whales = normalize_whale_timestamp(df_whales)
-        df_bars = normalize_bars_timestamp(df_bars)
+    output_dir = Path("plots") / symbol
 
-        # OPTIONAL: nur Whales über bestimmtem Wert filtern
-        # Beispiel, falls du eine USD-Notional-Spalte hast:
-        # if "usd_value" in df_whales.columns:
-        #     df_whales = df_whales[df_whales["usd_value"] >= 1_000_000]
+    plotted = 0
 
-        if df_whales.empty:
-            print(f"No whale events found for {symbol}")
+    for idx, whale in df_whales.iterrows():
+        ts = whale["timestamp"]
+
+        # Sicherheit: außerhalb des Bar-Zeitraums überspringen
+        if ts < df_bars["timestamp"].min():
+            print(f"Whale {idx} zu früh ({ts}), liegt vor Bars-Start.")
+            continue
+        if ts > df_bars["timestamp"].max():
+            print(f"Whale {idx} zu spät ({ts}), liegt nach Bars-Ende.")
             continue
 
-        # Jede Whale-Order einzeln plottet die nächsten 30 Minuten
-        for idx, whale in df_whales.iterrows():
-            whale_ts = whale["whale_ts"]  # korrekt konvertierte Datetime
+        save_file = output_dir / f"{symbol}_whale_{idx}_{ts.strftime('%Y-%m-%d_%H-%M-%S')}.png"
 
-            save_name = (
-                f"{symbol}_whale_{idx}_"
-                f"{whale_ts.strftime('%Y-%m-%d_%H-%M-%S')}.png"
-            )
-            save_path = IMG_DIR / save_name
+        plot_after_whale(
+            df_bars=df_bars,
+            whale=whale,
+            symbol=symbol,
+            save_path=save_file,
+            minutes_after=30
+        )
+        plotted += 1
 
-            print(f"Plotting whale event #{idx} at {whale_ts}")
+    print(f"Fertig: {plotted} Plots für {symbol} erstellt.\n")
 
-            plot_after_whale_event(
-                df_bars=df_bars,
-                whale_timestamp=whale_ts,
-                symbol=symbol,
-                save_path=save_path,
-                minutes_after=30,
-            )
+
+if __name__ == "__main__":
+    compare_parquets(
+        whale_parquet=r"C:\Users\sgenk\PycharmProjects\Crypto-Whale-Detection\experiment\exp_1\data\raw\Orderbook\BTCUSDT\BTCUSDT_20240620-20250620_whales.parquet",
+        bars_parquet=r"C:\Users\sgenk\PycharmProjects\Crypto-Whale-Detection\experiment\exp_1\data\raw\Bars_1m\BTCUSDT\2023-06-20_to_2025-06-20.parquet",
+        symbol="BTCUSDT",
+    )

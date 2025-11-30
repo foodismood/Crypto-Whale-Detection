@@ -6,13 +6,13 @@ import os
 # Pfade – angepasst für dein Projekt
 
 BASE_DIR = Path(os.path.expanduser(
-    "~/PycharmProjects/Crypto-Whale-Detection/1/experiment/exp_1/data/raw/Orderbook"
+    "~/PycharmProjects/Crypto-Whale-Detection/experiment/exp_1/data/raw/Orderbook/BTCUSDT"
 ))
 IMG_DIR = BASE_DIR / "images"
 IMG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Symbol / Monat auswählen
-month_folder = "BTCUSDT"
+month_folder = "2024-06"
 data_folder = BASE_DIR / month_folder
 
 # Neueste Parquet-Datei auswählen
