@@ -56,9 +56,8 @@ columns_we_need = ["timestamp", "symbol", "side", "price", "quantity", "value_us
 existing_columns = [c for c in columns_we_need if c in df.columns]
 df = df[existing_columns]
 
-# ---------------------------------------------
 # PNG erstellen
-# ---------------------------------------------
+
 preview = df.head(40)  # nur die ersten 40 Zeilen
 
 plt.figure(figsize=(14, 8))
