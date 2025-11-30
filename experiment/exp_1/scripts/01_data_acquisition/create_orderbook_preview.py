@@ -6,7 +6,7 @@ import os
 # Pfade – angepasst für dein Projekt
 
 BASE_DIR = Path(os.path.expanduser(
-    "~/PycharmProjects/Crypto-Whale-Detection/1/experiment/exp_1/data/raw/Orderbook/BTCUSDT"
+    "~/PycharmProjects/Crypto-Whale-Detection/experiment/exp_1/data/raw/Orderbook/BTCUSDT"
 ))
 IMG_DIR = BASE_DIR / "images"
 IMG_DIR.mkdir(parents=True, exist_ok=True)
