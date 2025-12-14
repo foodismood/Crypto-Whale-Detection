@@ -44,9 +44,9 @@ if missing_cols:
 
 df = df[columns_we_need]
 
-# ---------------------------------------------
+
 # PNG erzeugen
-# ---------------------------------------------
+
 preview = df.head(50)
 
 plt.figure(figsize=(14, 6))
@@ -60,4 +60,4 @@ plt.axis("off")
 out_file = os.path.join(BASE_DIR, "parquet_preview.png")
 plt.savefig(out_file, dpi=300, bbox_inches="tight")
 
-print("✅ PNG gespeichert unter:", out_file)
+print(" PNG gespeichert unter:", out_file)

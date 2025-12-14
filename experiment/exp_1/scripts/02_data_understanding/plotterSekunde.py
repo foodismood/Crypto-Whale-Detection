@@ -51,7 +51,7 @@ def plot_after_whale(df_bars: pd.DataFrame,
     # Index finden
     matches = df_bars.index[df_bars["timestamp"] >= whale_ts]
     if len(matches) == 0:
-        print(f"⚠️ Keine Bars nach Whale gefunden bei {whale_ts}")
+        print(f" Keine Bars nach Whale gefunden bei {whale_ts}")
         return
 
     start_idx = matches.min()
@@ -60,7 +60,7 @@ def plot_after_whale(df_bars: pd.DataFrame,
     subset = df_bars.loc[start_idx:end_idx].copy().reset_index(drop=True)
 
     if subset.empty:
-        print(f"⚠️ Leeres Zeitfenster nach Whale {whale_ts}")
+        print(f"️ Leeres Zeitfenster nach Whale {whale_ts}")
         return
 
     # ================================

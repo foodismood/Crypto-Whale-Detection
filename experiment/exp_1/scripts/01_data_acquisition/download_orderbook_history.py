@@ -46,7 +46,7 @@ def download_and_extract(symbol, year, month):
     # Entpacken
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(month_dir)
-    print(f"📦 Entpackt: {zip_path}")
+    print(f" Entpackt: {zip_path}")
 
     # Zip löschen
     os.remove(zip_path)

@@ -143,7 +143,7 @@ def plot_whale_event(df: pd.DataFrame,
     window = df[(df["timestamp"] >= event_time) & (df["timestamp"] <= end_time)].copy()
 
     if window.empty:
-        print(f"⚠️ Kein Datenfenster nach {event_time} gefunden – überspringe.")
+        print(f"️ Kein Datenfenster nach {event_time} gefunden – überspringe.")
         return
 
     plt.figure(figsize=(14, 6))
@@ -181,7 +181,7 @@ def plot_whale_event(df: pd.DataFrame,
     plt.savefig(save_path, dpi=150)
     plt.close()
 
-    print(f"✅ Saved plot → {save_path}")
+    print(f" Saved plot → {save_path}")
 
 
 # ============================================================
@@ -196,7 +196,7 @@ def run_for_symbol(symbol: str):
     df_events = df[df["whale_value"] >= 3_000_000].copy()
 
     if df_events.empty:
-        print(f"⚠️ Keine Whale-Events ≥ 3M USD für {symbol} gefunden.")
+        print(f"️ Keine Whale-Events ≥ 3M USD für {symbol} gefunden.")
         return
 
     # Nach Whale-Size sortieren (absteigend)
@@ -221,7 +221,7 @@ def run_for_symbol(symbol: str):
             break
 
     if not selected_rows:
-        print(f"⚠️ Konnte keine 5 verschiedenen Whale-Sizes für {symbol} wählen.")
+        print(f" Konnte keine 5 verschiedenen Whale-Sizes für {symbol} wählen.")
         return
 
     out_dir = os.path.join(OUTPUT_DIR, symbol)
@@ -242,4 +242,4 @@ def run_for_symbol(symbol: str):
 if __name__ == "__main__":
     run_for_symbol("BTCUSDT")
     run_for_symbol("ETHUSDT")
-    print("\n🎯 DONE: Distinct Whale Events for BTCUSDT & ETHUSDT plotted.")
+    print("\n DONE: Distinct Whale Events for BTCUSDT & ETHUSDT plotted.")

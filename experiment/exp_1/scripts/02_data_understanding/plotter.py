@@ -31,7 +31,7 @@ def prepare_whales(whale_parquet: str) -> pd.DataFrame:
     df_whales = df_whales.loc[mask].copy()
 
     after = len(df_whales)
-    print(f"🧹 Whale cleanup: {before} → {after} Zeilen (entfernt: {before - after})")
+    print(f" Whale cleanup: {before} → {after} Zeilen (entfernt: {before - after})")
 
     # Jetzt sicher in Datetime (Unix ms)
     df_whales["timestamp"] = pd.to_datetime(df_whales["time"], unit="ms", errors="coerce")
