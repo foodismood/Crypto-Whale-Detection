@@ -55,13 +55,13 @@ def download_month(symbol: str, year: int, month: int) -> pd.DataFrame:
     """Lädt einen Monats-1s-Kline-Datensatz von Binance Vision."""
 
     url = f"https://data.binance.vision/data/spot/monthly/klines/{symbol}/1s/{symbol}-1s-{year}-{month:02d}.zip"
-    print(f"📥 Downloading: {url}")
+    print(f" Downloading: {url}")
 
     tmp_zip = f"/tmp/{symbol}-1s-{year}-{month:02d}.zip"
 
     r = requests.get(url)
     if r.status_code != 200:
-        print(f"⚠️ Datei nicht gefunden: {url}")
+        print(f"️ Datei nicht gefunden: {url}")
         return None
 
     # ZIP speichern
@@ -75,7 +75,7 @@ def download_month(symbol: str, year: int, month: int) -> pd.DataFrame:
     csv_file = f"/tmp/{symbol}-1s-{year}-{month:02d}.csv"
 
     if not os.path.exists(csv_file):
-        print(f"⚠️ CSV fehlt nach dem Entpacken: {csv_file}")
+        print(f" CSV fehlt nach dem Entpacken: {csv_file}")
         return None
 
     # CSV laden
@@ -108,7 +108,7 @@ def download_all():
 
     for symbol in SYMBOLS:
         print("\n==============================")
-        print(f"⬇️  LADER STARTE FÜR: {symbol}")
+        print(f"  LADER STARTE FÜR: {symbol}")
         print("==============================")
 
         out_dir = ensure_dirs(symbol)
@@ -136,9 +136,9 @@ def download_all():
             final_df = pd.concat(dfs, ignore_index=True)
             save_path = out_dir / f"{symbol}_1s_20240620_20250620.parquet"
             final_df.to_parquet(save_path, index=False)
-            print(f"✅ Gespeichert: {save_path}")
+            print(f" Gespeichert: {save_path}")
         else:
-            print(f"⚠️ Keine Daten für {symbol}")
+            print(f" Keine Daten für {symbol}")
 
 
 # ================================

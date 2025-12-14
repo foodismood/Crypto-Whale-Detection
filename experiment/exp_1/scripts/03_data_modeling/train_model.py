@@ -4,9 +4,9 @@ import pandas as pd
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, f1_score, classification_report
 
-# --------------------------------------------------
+
 # DATA PATHS
-# --------------------------------------------------
+
 
 BASE = "/Users/alperademgencer/PycharmProjects/Crypto-Whale-Detection/1/experiment/exp_1"
 FEATURE_DIR = f"{BASE}/data/processed"
@@ -18,9 +18,9 @@ FEATURE_FILES = {
     "ETHUSDT": f"{FEATURE_DIR}/ETHUSDT_features_1s.parquet",
 }
 
-# --------------------------------------------------
+
 # FEATURES THAT REALLY EXIST
-# --------------------------------------------------
+
 
 FEATURES = [
     "return_1s",
@@ -40,9 +40,9 @@ FEATURES = [
 
 TARGET = "target_3class"
 
-# --------------------------------------------------
+
 # TRAINING FUNCTION
-# --------------------------------------------------
+
 
 def train_symbol(symbol: str):
 

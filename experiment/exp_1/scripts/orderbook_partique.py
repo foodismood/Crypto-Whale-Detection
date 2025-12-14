@@ -3,18 +3,17 @@ import matplotlib.pyplot as plt
 import os
 from pathlib import Path
 
-# ---------------------------------------------
+
 # Pfade – identisch zu deinem Projekt
-# ---------------------------------------------
+
 BASE_DIR = Path(r"C:/Users/sgenk/PycharmProjects/Crypto-Whale-Detection")
 DATA_DIR = BASE_DIR / "experiment" / "exp_1" / "data" / "raw" / "orderbook"
 IMG_DIR = BASE_DIR / "experiment" / "exp_1" / "images"
 
 IMG_DIR.mkdir(parents=True, exist_ok=True)
 
-# ---------------------------------------------
+
 # Datei auswählen (jüngste Whale-Datei)
-# ---------------------------------------------
 symbol = "BTCUSDT"
 
 symbol_folder = DATA_DIR / symbol
@@ -29,9 +28,9 @@ print(f"Lade Datei:\n{latest_file}\n")
 
 df = pd.read_parquet(latest_file)
 
-# ---------------------------------------------
+
 # Nur relevante Orderbook-Whale-Spalten
-# ---------------------------------------------
+
 columns_we_need = [
     "timestamp",
     "symbol",
