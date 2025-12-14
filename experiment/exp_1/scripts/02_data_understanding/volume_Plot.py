@@ -25,7 +25,7 @@ df["timestamp"] = pd.to_datetime(df["timestamp"])
 # -------------------------------------------------------
 
 if "taker_buy_quote" not in df.columns:
-    raise ValueError("❌ Die Datei enthält kein 'taker_buy_quote'. Bitte erneut mit Download-Skript laden!")
+    raise ValueError(" Die Datei enthält kein 'taker_buy_quote'. Bitte erneut mit Download-Skript laden!")
 
 df["buy_volume"] = df["taker_buy_quote"]                     # USD der aggressiven Käufer
 df["sell_volume"] = df["quote_volume"] - df["taker_buy_quote"]  # USD der aggressiven Verkäufer
@@ -61,7 +61,7 @@ for idx, row in events.iterrows():
     # Preis
     price_at_t = df.loc[df["timestamp"] == t, "close"].iloc[0]
 
-    # Preis 30 Sekunden später
+    # Preis 30 Sekunden später .
     try:
         price_at_t_plus_30 = df.loc[df["timestamp"] == t + pd.Timedelta(seconds=30), "close"].iloc[0]
         pct_change = (price_at_t_plus_30 - price_at_t) / price_at_t * 100
