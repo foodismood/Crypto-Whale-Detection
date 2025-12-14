@@ -90,9 +90,9 @@ bars_1s["timestamp"] = pd.to_datetime(bars_1s["timestamp"])
 df_1s = bars_1s.set_index("timestamp").sort_index()
 print(f"Loaded {len(df_1s)} 1-sec bars (local)")
 
-# ======================================================
+
 # EVENT DETECTION + MODEL
-# ======================================================
+
 up, down, neutral = [], [], []
 
 for i in range(WINDOW_Z, len(df_1m) - 1):
